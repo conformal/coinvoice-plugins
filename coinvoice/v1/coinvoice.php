@@ -97,6 +97,19 @@ class Coinvoice {
 		return $url = $this->host.self::URLCREATE;
 	}
 
+	/**
+	 * Create HTTP headers for a POST.
+	 *
+	 * The headers are in CURL format and might have to be altered for other POST methods.
+	 * The Drupal 6 Ubercart code (https://github.com/conformal/coinvoice-plugins/tree/master/d6_ubercart) 
+	 * has such an example.
+	 *
+	 * @access private
+	 * @param string $json valid JSON RPC.
+	 * @param array $headers passed by reference and on success contains the required HTTP headers.
+	 * @param boolean $secure passed by reference and on success contains true if this is an HTTPS connection.
+	 * @return boolean true if successful or false if unsuccessful.
+	 */
 	private function createHeader($json, &$headers, &$secure) {
 		$url = $this->getUrl($json);
 
