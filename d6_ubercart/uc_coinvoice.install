@@ -1,0 +1,33 @@
+<?php
+
+/**
+ * @file
+ * Install file for uc_coinvoice.module.
+ */
+
+/**
+ * Implements hook_uninstall().
+ */
+function uc_coinvoice_uninstall() {
+  db_query("DELETE FROM {variable} WHERE name LIKE 'uc_coinvoice_%%'");
+}
+
+/**
+ * Implements hook_requirements().
+ */
+function uc_coinvoice_requirements($phase) {
+	$t = get_t();
+
+	$has_curl = function_exists('curl_init');
+
+	// coinvoice requires curl
+	if (!$has_curl) {
+		$requirements['uc_coinvoice_curl']['severity'] = REQUIREMENT_ERROR;
+		$requirements['uc_coinvoice_curl']['description'] = $t("Coinvoice requires the PHP '.
+			'<a href='!curl_url'>cURL</a> library.", array('!curl_url'=>
+			'http://php.net/manual/en/curl.setup.php'));
+	}
+
+	return $requirements;
+}
+

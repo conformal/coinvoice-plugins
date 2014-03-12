@@ -1,0 +1,17 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: coinvoice\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: 2014-01-30 15:21-0600\n"
+"Last-Translator: Marco Peereboom <marco@conformal.com>\n"
+"Language-Team: Conformal Systems LLC. <support@conformal.com>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-Language: English\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#Test token 1
+msgid "HELLO_WORLD"
+msgstr "Hello World!"
+

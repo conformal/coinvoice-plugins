@@ -1,0 +1,6 @@
+name = Coinvoice
+description = Processes payments using Coinvoice
+dependencies[] = uc_payment
+package = Ubercart - payment
+core = 6.x
+php = 5.0

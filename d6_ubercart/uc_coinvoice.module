@@ -1,0 +1,555 @@
+<?php
+/**
+ * @author Conformal Systems LLC.
+ * @copyright Copyright (c) 2014 Conformal Systems LLC. <support@conformal.com>
+ * @license
+ * Copyright (c) Conformal Systems LLC. <support@conformal.com>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/**
+ * @file
+ * Integrates Coinvoice.com's redirected payment service.
+ */
+
+$path = base_path().drupal_get_path('module', 'uc_coinvoice').'/coinvoice/v1/coinvoice.php';
+if (!file_exists($path)) {
+	$path = drupal_get_path('module', 'uc_coinvoice').'/coinvoice/v1/coinvoice.php';
+}
+include($path);
+
+function Debug($prefix, $text) {
+	if (variable_get('uc_coinvoice_debug', false) === 0) {
+		return;
+	}
+
+	$f = fopen('/tmp/coinvoice.log', 'a');
+	if (flock($f, LOCK_EX)) {
+		fwrite($f, date('Ymd H:i:s: ').$prefix.' '.$text."\n");
+		fflush($f);
+		flock($f, LOCK_UN);
+	} else {
+		// just try something
+		echo "could not lock debug log\n";
+	}
+	fclose($f);
+}
+
+/**
+ * Implements hook_menu().
+ *
+ * This is only called once during module install.
+ */
+function uc_coinvoice_menu() {
+	Debug(__METHOD__, '');
+
+	// notifications
+	$items['uc_coinvoice/notifications'] = array(
+		'title' => 'Coinvoice Notifications',
+		'page callback' => 'uc_coinvoice_notifications',
+		'access callback' => 'uc_coinvoice_completion_access',
+		'type' => MENU_CALLBACK,
+		'file' => 'uc_coinvoice.pages.inc',
+	);
+
+	// callback function for completion
+	$items['uc_coinvoice/complete/%uc_order'] = array(
+		'title' => 'Coinvoice payment received',
+		'page callback' => 'uc_coinvoice_complete',
+		'page arguments' => array(3),
+		'access arguments' => array('access content'),
+		'type' => MENU_CALLBACK,
+		'file' => 'uc_coinvoice.pages.inc',
+	);
+
+	return $items;
+}
+
+function uc_coinvoice_completion_access() {
+	Debug(__METHOD__, '');
+	return true;
+}
+
+/**
+ * Implements hook_init().
+ */
+function uc_coinvoice_init() {
+	// not sure we need this yet
+	Debug(__METHOD__, '');
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function uc_coinvoice_form_alter(&$form, $form_state, $form_id) {
+	// not sure we need this yet
+	Debug(__METHOD__, "form_id: $form_id");
+
+	if ($form_id == 'uc_cart_checkout_review_form' && ($order_id = intval($_SESSION['cart_order'])) > 0) {
+		$order = uc_order_load($order_id);
+
+		if ($order->payment_method == 'coinvoice') {
+			unset($form['submit']);
+			$form['#prefix'] = '<table style="display: inline; padding-top: 1em;"><tr><td>';
+			$form['#suffix'] = '</td><td>'.drupal_get_form('uc_coinvoice_rig_submit_button', $order).
+				'</td></tr></table>';
+		}
+	}
+}
+
+/**
+ * Change button text and callback mechanism.
+ *
+ * @see uc_coinvoice_form_alter
+ */
+function uc_coinvoice_rig_submit_button($form_state, $order) {
+	Debug(__METHOD__, "form_state: $form_state");
+
+	// decide if we are hosted or embedded
+	if (variable_get('uc_coinvoice_mode', 'redirect') === 'redirect') {
+		$form['submit'] = array(
+			'#type'=>'submit',
+			'#value'=>t('Go to Coinvoice to complete payment'),
+			'#executes_submit_callback'=>true,
+			'#submit'=>array('uc_coinvoice_submit'),
+		);
+	} else {
+		post_coinvoice($coinvoiceReply, $coinvoice_url);
+
+		drupal_add_js (drupal_get_path('module', 'uc_coinvoice').'/qrcode.js');
+		drupal_add_js (drupal_get_path('module', 'uc_coinvoice').'/cv_timer.js');
+		drupal_add_css(drupal_get_path('module', 'uc_coinvoice').'/app.css');
+		$form['coinvoice'] = array(
+			'#value'=>'
+		<div id="btcPaymentInfo">
+			<span id="paymentCode" style="display:none;">'.$coinvoiceReply->PaymentLinkId.'</span>
+			<span id="endTime" style="display:none;">'.date('c',$coinvoiceReply->ExpirationTime).'</span>
+			<div class="green">
+				<div id="topRow">
+					<div id="timer">
+						<span class="timer_icon"></span>
+						<span class="timer text-center" id="timeLeft"></span>
+					</div>
+					<div id="payButton">
+						<a href="'.$link.'" class="btclink">Pay with local wallet</a>
+					</div>
+					<table class="specialTable">
+						<thead>
+							<tr>
+								<th>Address</th>
+								<th>Btc to pay</th>
+								<th>Btc/Usd rate</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td id="vcAddress">'.$coinvoiceReply->BtcAddress.'</td>
+								<td id="toBePaid">'.$coinvoiceReply->TotalBtc.'</td>
+								<td>'.round($coinvoiceReply->BtcQuoteRate, 2).'</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div id="qrArea">
+					<div id="qrcode" class="qrcode"></div>
+				</div>
+				<div id="partialPaymentInfo">
+				</div>
+			</div>
+		</div>
+		<div id="timerUp" class="green" style="display:none;">
+			<h1 class="text-center">Please refresh this page.</h1>
+			<p class="text-center">To receive a current BTC price you must reload this page.  If you have already sent your payment this page will automatically update once we receive the first confirmation.</p>
+		</div>
+		<div id="paid" class="green" style="display:none;">
+			<h1 class="text-center">Payment Received!</h1>
+			<div id="paidTable">
+				<table class="bordered">
+					<tbody>
+						<tr>
+							<th>Btc address</th><td id="btcAddress">'.$coinvoiceReply->BtcAddress.'</td>
+						</tr>
+						<tr id="btcPaid">
+							<th>Amount</th>
+						</tr>
+						<tr id="btcPaidTime">
+							<th>Paid time</th>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div id="txFound" class="green" style="display:none;">
+			<h3 class="text-center lato">Payment Received</h3>
+			<div id="txFoundTable">
+				<table class="bordered">
+					<tbody>
+						<tr id="btcAddress">
+							<th>Btc address</th><td>'.$coinvoiceReply->BtcAddress.'</td>
+						</tr>
+						<tr id="txFoundAmt">
+							<th>Amount</th>
+						</tr>
+						<tr id="txFoundTime">
+							<th>Paid time</th>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div id="confirmationsArea">
+				<h3 class="text-center">Confirmations</h3>
+				<div class="container">
+					<ul id="confirms">
+						<li id="confirm1">1<div id="conf1" class="conf"></div><div id="pulse1" class="pulse"></div></li>
+						<li id="confirm2">2<div id="conf2" class="conf"></div><div id="pulse2" class="pulse"></div></li>
+						<li id="confirm3">3<div id="conf3" class="conf"></div><div id="pulse3" class="pulse"></div></li>
+						<li id="confirm4">4<div id="conf4" class="conf"></div><div id="pulse4" class="pulse"></div></li>
+						<li id="confirm5">5<div id="conf5" class="conf"></div><div id="pulse5" class="pulse"></div></li>
+						<li id="confirm6">6<div id="conf6" class="conf"></div><div id="pulse6" class="pulse"></div></li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		<div id="errorPayment" class="green" style="display:none;">
+			<h3 class="text-center lato">An error occured.</h3>
+			<span class="text-center error", id="errorFromServer">
+				Our serve has unexpectedly disconnected.  Please reload this page
+			</span>
+			<div id="errorMessageArea">
+			</div>
+		</div>
+		',
+		);
+	}
+
+	return $form;
+}
+
+function CvError($error, $extras) {
+	drupal_set_message($error, 'error');
+
+	// add to logs as well so that the admin has an idea what is going on
+	watchdog('error', $error.' '.$extras);
+}
+
+function post_coinvoice(&$coinvoiceReply, &$coinvoice_url) {
+	$order = uc_order_load($_SESSION['cart_order']);
+	Debug(__METHOD__, "ID: $order->order_id");
+
+	// translate ubercart order into coinvoice invoice
+	$country = uc_get_country_data(array('country_id' => $order->billing_country));
+	$invoiceRequest = new CvInvoiceRequest();
+	$invoiceRequest->PayerName     = $order->billing_first_name .' '. $order->billing_last_name;
+	$invoiceRequest->PayerAddress1 = $order->billing_street1;
+	$invoiceRequest->PayerAddress2 = $order->billing_street2;
+	$invoiceRequest->PayerCity     = $order->billing_city;
+	$invoiceRequest->PayerState    = uc_get_zone_code($order->billing_zone);
+	$invoiceRequest->PayerZip      = $order->billing_postal_code;
+	$invoiceRequest->PayerCountry  = $country[0]['country_iso_code_2'];
+	$invoiceRequest->PayerEmail    = $order->primary_email;
+	$invoiceRequest->PayerCurrency = 'BTC';
+	$invoiceRequest->PriceCurrency = $order->currency;
+	if ($invoiceRequest->PriceCurrency !== 'USD') {
+		Debug(__METHOD__, "Invalid PriceCurrency, only USD supported for now!");
+		CvError(t('Internal error(1): currently only USD is supported for PriceCurrency'));
+		drupal_goto('cart/checkout');
+	}
+	if ($order->billing_phone === "") {
+		$invoiceRequest->PayerPhone = '555 555 5555';
+	} else {
+		$invoiceRequest->PayerPhone = $order->billing_phone;
+	}
+
+	//line items
+	$total = 0.0;
+	$itemCount = 0;
+	foreach ($order->products as $uc_item) {
+		$item = new CvItem();
+		$item->ItemCode = $uc_item->model;
+		$item->ItemDesc = $uc_item->title;
+		$item->ItemQuantity = strval($uc_item->qty);
+		$item->ItemPricePer = sprintf("%.2f", $uc_item->price);
+		if ($invoiceRequest->ItemAdd($item, $error) === false) {
+			Debug(__METHOD__, "ItemAdd $error");
+			CvError(t('Internal error(2): ').$error);
+			drupal_goto('cart/checkout');
+		}
+		$total += $item->ItemQuantity * $item->ItemPricePer;
+		$itemCount++;
+	}
+
+	// shipping
+	$shipping = 0;
+	foreach ($order->line_items as $item) {
+		if ($item['type'] == 'shipping') {
+			$shipping += $item['amount'];
+		}
+	}
+	if ($shipping != 0) {
+		$item = new CvItem();
+		$item->ItemCode = "";
+		$item->ItemDesc = t("Shipping");
+		$item->ItemQuantity = "1";
+		$item->ItemPricePer = sprintf("%.2f", $shipping);
+		if ($invoiceRequest->ItemAdd($item, $error) === false) {
+			Debug(__METHOD__, "ItemAdd $error");
+			CvError(t('Internal error(2.1): Please contact the administrator').$error);
+			drupal_goto('cart/checkout');
+		}
+		$total += $item->ItemQuantity * $item->ItemPricePer;
+		$itemCount++;
+	}
+
+	// tax
+	$tax = 0;
+	if (module_exists('uc_taxes')) {
+		foreach (uc_taxes_calculate($order) as $tax_item) {
+			$tax += $tax_item->amount;
+		}
+	}
+	if ($tax != 0) {
+		$item = new CvItem();
+		$item->ItemCode = "";
+		$item->ItemDesc = t("Sales tax");
+		$item->ItemQuantity = "1";
+		$item->ItemPricePer = sprintf("%.2f", $tax);
+		if ($invoiceRequest->ItemAdd($item, $error) === false) {
+			Debug(__METHOD__, "ItemAdd $error");
+			CvError(t('Internal error(2.2): Please contact the administrator').$error);
+			drupal_goto('cart/checkout');
+		}
+		$total += $item->ItemQuantity * $item->ItemPricePer;
+		$itemCount++;
+	}
+
+	// discounts (negative amount line items), tested with uc_coupon.
+	$discount = 0;
+	foreach ($order->line_items as $item) {
+		if ($item['amount'] < 0) {
+			$discount += $item['amount'];
+		}
+	}
+	if ($discount != 0) {
+		$item = new CvItem();
+		$item->ItemCode = "";
+		$item->ItemDesc = t("Discount");
+		$item->ItemQuantity = "1";
+		$item->ItemPricePer = sprintf("%.2f", $discount);
+		if ($invoiceRequest->ItemAdd($item, $error) === false) {
+			Debug(__METHOD__, "ItemAdd $error");
+			CvError(t('Internal error(2.3): Please contact the administrator').$error);
+			drupal_goto('cart/checkout');
+		}
+		$total += $item->ItemQuantity * $item->ItemPricePer;
+		$itemCount++;
+	}
+
+	// assert order total
+	if (abs($order->order_total - $total) > 0.01) {
+		Debug(__METHOD__, "Totals do not match");
+		CvError(t('Internal error(2.4): Please contact the administrator'));
+		drupal_goto('cart/checkout');
+	}
+
+
+	// Notifications
+	$invoiceRequest->NotificationURL = url('uc_coinvoice/notifications/'.$order->order_id, array('absolute' => TRUE));
+	Debug(__METHOD__, 'out: '.$invoiceRequest->NotificationURL);
+	$invoiceRequest->InternalInvoiceId = base64_encode(serialize(
+		array($order->order_id, uc_cart_get_id())));
+	//// create a unique enough key to cause duplicate order collisions
+	//$data = $wc_order->id.$invoiceRequest->PayerName.$invoiceRequest->PayerEmail.$total.$itemCount;
+	//$key = get_site_url();
+	//$invoiceRequest->AlternateInvoiceKey = hash_hmac('sha256', $data, $key, false);
+
+	if (1 === variable_get('uc_coinvoice_sandbox', false)) {
+		Debug(__METHOD__, 'SANDBOX MODE');
+		$invoiceRequest->TestInvoice = 'yes';
+	}
+
+	if (!$invoiceRequest->Marshal($json, $error)) {
+		Debug(__METHOD__, "Marshal $error");
+		CvError(t('Internal error(3): ').$error);
+		drupal_goto('cart/checkout');
+	}
+	Debug(__METHOD__, 'out: '.$json);
+
+	// submit invoice to coinvoice
+	$coinvoice = new Coinvoice();
+	$coinvoice->SetUserAgent("drupal/6"); // XXX do something moar bettar
+	$coinvoice->SetApiKey(variable_get('uc_coinvoice_api_key', ''));
+
+	if (1 === variable_get('uc_coinvoice_development', false)) {
+		$coinvoice_url = variable_get('uc_coinvoice_url', '');
+		Debug(__METHOD__, "Development mode: POST ".$coinvoice_url);
+		$coinvoice->SetHost($coinvoice_url);
+	} else {
+		if (1 === variable_get('uc_coinvoice_sandbox', false)) {
+			$coinvoice_url = $coinvoice->GetSandboxHostName();
+		} else {
+			$coinvoice_url = $coinvoice->GetHostName();
+		}
+	}
+
+	if (!$coinvoice->Post($json, $reply, $error)) {
+		Debug(__METHOD__, "Post $error");
+
+		// see if we got a better error to show user
+		$CvFailure = new CvFailure();
+		if ($CvFailure->Unmarshal($reply, $error)) {
+			// successfully unmarshaled, use ErrorCode instead
+			$error = $CvFailure->ErrorCode;
+		}
+		CvError(t('Internal error(4): ').$error, $reply);
+		drupal_goto('cart/checkout');
+	}
+	Debug(__METHOD__, 'in: '.var_export($reply, true));
+
+	// decode reply from coinvoice
+	$coinvoiceReply = new CvInvoiceReply();
+	if (!$coinvoiceReply->Unmarshal($reply, $error)) {
+		Debug(__METHOD__, "Unmarshal $error");
+
+		// see if we got a better error to show user
+		$CvFailure = new CvFailure();
+		if ($CvFailure->Unmarshal($reply, $error)) {
+			// successfully unmarshaled, use ErrorCode instead
+			$error = $CvFailure->ErrorCode;
+		}
+		Debug(__METHOD__, "post_invoice->Unmarshal user error: $error");
+
+		CvError(t('Internal error(5): ').$error, $reply);
+		drupal_goto('cart/checkout');
+	}
+
+	if ($coinvoiceReply->Status !== CvInvoiceNotification::InvoiceStatusNew) {
+		// TODO do something with other invoice stati
+		Debug(__METHOD__, "Wrong invoice status $error");
+		CvError(t('Internal error(6): status = ').$coinvoiceReply->Status);
+		drupal_goto('cart/checkout');
+	}
+
+	return true;
+}
+
+/**
+ * Called when submit button is called.
+ *
+ * @see uc_coinvoice_rig_submit_button
+ */
+function uc_coinvoice_submit($form, &$form_state) {
+	$order = uc_order_load($_SESSION['cart_order']);
+	Debug(__METHOD__, "ID: $order->order_id");
+
+	post_coinvoice($coinvoiceReply, $coinvoice_url);
+
+	// redirect to coinvoice payment gateway
+	$return_url = url('uc_coinvoice/complete/'.$order->order_id, array('absolute'=>TRUE));
+	Debug(__METHOD__, "return url: ".$return_url);
+	$form_state['redirect'] = $coinvoice_url.'/pay/'.$coinvoiceReply->PaymentLinkId.
+		'/'.base64_encode($return_url);
+
+	return $form;
+}
+
+/**
+ * Implements hook_payment_method().
+ *
+ * @see uc_payment_method_coinvoice()
+ */
+function uc_coinvoice_payment_method() {
+	Debug(__METHOD__, '');
+
+	$path = base_path().drupal_get_path('module', 'uc_coinvoice');
+	$title = 'Bitcoin via Coinvoice '.
+	$title .='<img src="'.$path.'/coinvoice.png" style="position: relative; top: 10px; margin-right: 4px;" />';
+
+	$methods[] = array(
+		'id'=>'coinvoice',
+		'name'=>t('Coinvoice'),
+		'title'=>$title,
+		'review'=>'Coinvoice',
+		'desc'=>t('Redirect to Coinvoice to pay using Bitcoin.'),
+		'callback'=>'uc_payment_method_coinvoice',
+		'weight'=>10,
+		'checkout'=>false,
+		'no_gateway'=>true,
+	);
+
+	return $methods;
+}
+
+
+/**
+ * Add Coinvoice settings to the payment method settings form.
+ *
+ * @see uc_coinvoice_payment_method()
+ */
+function uc_payment_method_coinvoice($op, &$arg1) {
+	Debug(__METHOD__, $op);
+	//Debug(__METHOD__, $op.' '.var_export($arg1, true));
+	switch ($op) {
+	case 'settings':
+		// render settings
+		$form['uc_coinvoice_api_key'] = array(
+			'#type'=>'textfield',
+			'#title'=>t('API key'),
+			'#description'=>t('An API key must be generated on the coinvoice website.'.
+				'This key can be obtained by clicking on "Manage API" and following the instructions.'),
+			'#default_value'=>variable_get('uc_coinvoice_api_key', ''),
+			'#size'=>16,
+		);
+
+		$form['uc_coinvoice_mode'] = array(
+			'#type'=>'select',
+			'#title'=>t('Payment mode'),
+			'#description'=>t('Choose method of payment'),
+			'#options'=>array(
+				'redirect'=>t('Hosted checkout'),
+				//'direct'=>t('Payment on site'),
+			),
+			'#default_value'=>variable_get('uc_coinvoice_mode', 'redirect'),
+		);
+
+		$form['uc_coinvoice_debug'] = array(
+			'#type'=>'checkbox',
+			'#title'=>t('Enable Coinvoice debug'),
+			'#default_value'=>variable_get('uc_coinvoice_debug', false),
+		);
+
+		$form['uc_coinvoice_sandbox'] = array(
+			'#type'=>'checkbox',
+			'#title'=>t('Enable Coinvoice in sanbox mode'),
+			'#default_value'=>variable_get('uc_coinvoice_sandbox', false),
+		);
+
+		//$form['uc_coinvoice_development'] = array(
+		//	'#type'=>'checkbox',
+		//	'#title'=>t('Enable Coinvoice development mode'),
+		//	'#default_value'=>variable_get('uc_coinvoice_development', false),
+		//);
+
+		//if (1 === variable_get('uc_coinvoice_development', false)) {
+		//	$form['uc_coinvoice_url'] = array(
+		//		'#type'=>'textfield',
+		//		'#title'=>t('Coinvoice URL'),
+		//		'#description'=>t('Coinvoice employees only, please do not use.'),
+		//		'#default_value'=>variable_get('uc_coinvoice_url', 'http://10.170.0.100:9000'),
+		//		'#size'=>16,
+		//	);
+		//}
+
+		return $form;
+	}
+}
