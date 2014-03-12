@@ -80,6 +80,15 @@ class Coinvoice {
 	 */
 	private $userAgent = 'Coinvoice/v1';
 
+	/**
+	 * Generate URL based on TestInvoice.
+	 *
+	 * If TestInvoice is set to 'yes' than the returned URL is pointing to the sandbox.
+	 *
+	 * @access private
+	 * @param string $json valid JSON RPC.  This is used to determine if this is a test invoice.
+	 * @return string coinvoice or sandbox URL.
+	 */
 	private function getUrl($json) {
 		$a = json_decode($json, true);
 		if ($a !== false && isset($a['TestInvoice'])) {
