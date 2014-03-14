@@ -59,11 +59,7 @@
 		// check to see if browser is able to create websockets
 		if( typeof(WebSocket) == "function" ) {
 			var websocket;
-			if (location.protocol == "http:") {
-				websocket = "ws://";
-			} else if (location.protocol == "https:") {
-				websocket = "wss://";
-			}
+			websocket = "wss://";
 			// Create a socket
 			var socket = new WebSocket(websocket+window.location.host+'/paymentportal/check?code='+$("#paymentCode").text());
 			// Message received on the socket
