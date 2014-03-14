@@ -772,9 +772,9 @@ function woocommerce_coinvoice_init() {
 				$item->ItemDesc  = $wc_item['name'];
 				$item->ItemQuantity  = $wc_item['qty'];
 				if (get_option('woocommerce_prices_include_tax') === 'yes') {
-					$line_total = $wc_order->get_line_subtotal($wc_item, true);
+					$line_total = $wc_order->get_line_subtotal($wc_item, true /*tax*/, true /*round*/);
 				} else {
-					$line_total = $wc_order->get_line_subtotal($wc_item, false);
+					$line_total = $wc_order->get_line_subtotal($wc_item, false /*tax*/, true /*round*/);
 				}
 				$item->ItemPricePer  = sprintf("%.2f", $line_total / $wc_item['qty']);
 				if ($invoiceRequest->ItemAdd($item, $error) === false) {
@@ -785,29 +785,37 @@ function woocommerce_coinvoice_init() {
 				$total = $total + $line_total;
 				$itemCount++;
 			}
+			$this->debug(__METHOD__, "line items: ".$total);
 			// tax, don't include if tax is already part of line items
 			if ($wc_order->get_total_tax() != 0 && get_option('woocommerce_prices_include_tax') !== 'yes') {
 				$item = new CvItem();
 				$item->ItemCode= '';
 				$item->ItemDesc  = __('Sales tax', 'woothemes');
 				$item->ItemQuantity  = '1';
-				$item->ItemPricePer = sprintf("%.2f", $wc_order->get_total_tax());
+				// woocomerce get_total_tax() method doesn't round correctly
+				// so calculate taxes and round ourselves
+				foreach ($wc_order->get_tax_totals() as $value) {
+					$tax += $value->amount;
+				}
+				$tax = round($tax, 2);
+				$item->ItemPricePer = sprintf("%.2f", tax);
 				if ($invoiceRequest->ItemAdd($item, $error) === false) {
 					$this->debug(__METHOD__, "post_invoice->ItemAdd $error");
 					CvError(__('Internal error(2.1): ', 'woothemes').$error);
 					return false;
 				}
-				$total = $total + $wc_order->get_total_tax();
+				$total = $total + $tax;
 			}
+
 			// shipping
 			if ($wc_order->get_total_shipping() != 0) {
 				$item = new CvItem();
 				$item->ItemCode= '';
 				$item->ItemDesc  = __('Shipping and handling', 'woothemes');
 				$item->ItemQuantity  = '1';
-				$shipping = $wc_order->get_total_shipping();
+				$shipping = round($wc_order->get_total_shipping(), 2);
 				if (get_option('woocommerce_prices_include_tax') === 'yes') {
-					$shipping += $wc_order->get_shipping_tax();
+					$shipping += round($wc_order->get_shipping_tax(), 2);
 				}
 				$item->ItemPricePer = sprintf("%.2f", $shipping);
 				if ($invoiceRequest->ItemAdd($item, $error) === false) {
@@ -817,24 +825,29 @@ function woocommerce_coinvoice_init() {
 				}
 				$total = $total + $shipping;
 			}
+			$this->debug(__METHOD__, "shipping: ".$shipping);
 			// coupens
 			if ($wc_order->get_total_discount() != 0) {
 				$item = new CvItem();
 				$item->ItemCode= '';
 				$item->ItemDesc  = __('Discounts', 'woothemes');
 				$item->ItemQuantity  = '1';
-				$item->ItemPricePer = sprintf("-%.2f", $wc_order->get_total_discount());
+				$discount = round($wc_order->get_total_discount(), 2);
+				$item->ItemPricePer = sprintf("-%.2f", $discount);
 				if ($invoiceRequest->ItemAdd($item, $error) === false) {
 					$this->debug(__METHOD__, "post_invoice->ItemAdd $error");
 					CvError(__('Internal error(2.3): ', 'woothemes').$error);
 					return false;
 				}
-				$total = $total - $wc_order->get_total_discount();
+				$total = $total - $discount;
 			}
+			$this->debug(__METHOD__, "discount: ".$discount);
+			$this->debug(__METHOD__, "total calculated: ".$total);
+			$this->debug(__METHOD__, "total: ".$wc_order->get_total());
 
 			// assert order total
 			if (abs($wc_order->get_total() - $total) > 0.01) {
-				$this->debug(__METHOD__, 'Totals do not match');
+				$this->debug(__METHOD__, 'Totals do not match got '.$total.' wanted '.$wc_order->get_total());
 				CvError(__('Internal error(2.4): Please contact the administrator', 'woothemes'));
 				return false;
 			}
