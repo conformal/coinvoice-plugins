@@ -59,103 +59,117 @@
 		// check to see if browser is able to create websockets
 		if( typeof(WebSocket) == "function" ) {
 			var websocket;
-			websocket = "wss://";
+			var host = $("#wsUrl").text();
+			var res = host.split("//");
+			var url = res[1];
+                       	if (res[0] == "http:") {
+                       	        websocket = "ws://";
+                       	} else if (res[0] == "https:") {
+                       	        websocket = "wss://";
+                       	}
 			// Create a socket
-			var socket = new WebSocket(websocket+window.location.host+'/paymentportal/check?code='+$("#paymentCode").text());
-			// Message received on the socket
-			socket.onmessage = function(event) {
-				data = JSON.parse(event.data);
-				if (data.Type == "message") {
-					// transaction found message
-					if (data.Paid == "txfound") {
-						paid = data.Paid;
-						var amt = data.AmntReceived;
-						var date = new Date(data.Timestamp*1000);
-						var minConf = data.MinConf;
-						if (!txFound) {
-							$("#txFoundAmt").append($("<td>", {
+			try{
+				var socket = new WebSocket(websocket+url+'/paymentportal/check?code='+$("#paymentCode").text());
+				// Message received on the socketfunction connect(){
+			        socket.onopen = function(){
+       					console.log("Connected: " + socket.readyState);
+       				 }
+				socket.onmessage = function(event) {
+					data = JSON.parse(event.data);
+					if (data.Type == "message") {
+						// transaction found message
+						if (data.Paid == "txfound") {
+							paid = data.Paid;
+							var amt = data.AmntReceived;
+							var date = new Date(data.Timestamp*1000);
+							var minConf = data.MinConf;
+							if (!txFound) {
+								$("#txFoundAmt").append($("<td>", {
+									text:"BTC " + amt
+								}));
+									$("#txFoundTime").append($("<td>", {
+									text:date
+								}));
+								$("#btcPaymentInfo").hide(1);
+								$("#txFound").show(1);
+							txFound = true;
+								}
+							// update confirmations
+							clearInterval(clock);
+							displayConfirmations(minConf);
+						// fully confirmed/paid message
+						} else if (data.Paid == "paid") {
+							paid = data.Paid;
+							amt = data.AmntReceived;
+							var date = new Date(data.Timestamp*1000);
+							$("#btcPaid").append($("<td>", {
 								text:"BTC " + amt
 							}));
-							$("#txFoundTime").append($("<td>", {
+							$("#btcPaidTime").append($("<td>", {
 								text:date
 							}));
 							$("#btcPaymentInfo").hide(1);
-							$("#txFound").show(1);
-							txFound = true;
+							$("#txFound").hide(1);
+							$("#paid").show(1);
+							foundError = false;
+							socket.close();
+						// partial payment message
+						} else if (data.Paid == "partial") {
+							$("#qrcode").empty();
+							var previousAmount = $("#toBePaid").text();
+							var newAmount = parseFloat(previousAmount) - parseFloat(data.AmntReceived);
+							$("#toBePaid").empty();
+							$("#toBePaid").text(newAmount);
+							// update qrcode and amounts to pay
+							var qrcode = new QRCode(document.getElementById("qrcode"), {
+								width : 150,
+								height : 150
+							});
+							var vcAddress = $("#vcAddress").text()
+							var amtToPay = $("#toBePaid").text()
+							qrcode.makeCode("bitcoin:"+vcAddress+"?amount="+amtToPay+"&label=Coinvoice-Invoice");
+							if (newAmount != 0) {
+								$("#partialPayment").remove();
+								$("#partialPaymentInfo").append($("<p>", {
+									class:"text-center",
+									id:"partialPayment",
+									text:"Partial Payment "+  data.AmntReceived
+								}));
+							}
+						// not paid message/default message
+						} else if (data.Paid == "not paid") {
+							var date = new Date(data.Timestamp*1000)
 						}
-						// update confirmations
-						clearInterval(clock);
-						displayConfirmations(minConf);
-					// fully confirmed/paid message
-					} else if (data.Paid == "paid") {
-						paid = data.Paid;
-						amt = data.AmntReceived;
-						var date = new Date(data.Timestamp*1000);
-						$("#btcPaid").append($("<td>", {
-							text:"BTC " + amt
-						}));
-						$("#btcPaidTime").append($("<td>", {
-							text:date
-						}));
+					// errors received from the websocket
+					} else if (data.Type == "error") {
 						$("#btcPaymentInfo").hide(1);
 						$("#txFound").hide(1);
-						$("#paid").show(1);
-						foundError = false;
+						$("#errorMessageArea").append($("<span>", {
+							class:"text-center error",
+							id:"errorFromServer",
+							text:data.ErrorMessage
+						}));
+						$("#errorPayment").show(1);
 						socket.close();
-					// partial payment message
-					} else if (data.Paid == "partial") {
-						$("#qrcode").empty();
-						var previousAmount = $("#toBePaid").text();
-						var newAmount = parseFloat(previousAmount) - parseFloat(data.AmntReceived);
-						$("#toBePaid").empty();
-						$("#toBePaid").text(newAmount);
-						// update qrcode and amounts to pay
-						var qrcode = new QRCode(document.getElementById("qrcode"), {
-							width : 150,
-							height : 150
-						});
-						var vcAddress = $("#vcAddress").text()
-						var amtToPay = $("#toBePaid").text()
-						qrcode.makeCode("bitcoin:"+vcAddress+"?amount="+amtToPay+"&label=Coinvoice-Invoice");
-						if (newAmount != 0) {
-							$("#partialPayment").remove();
-							$("#partialPaymentInfo").append($("<p>", {
-								class:"text-center",
-								id:"partialPayment",
-								text:"Partial Payment "+  data.AmntReceived
-							}));
-						}
-					// not paid message/default message
-					} else if (data.Paid == "not paid") {
-						var date = new Date(data.Timestamp*1000)
 					}
-				// errors received from the websocket
-				} else if (data.Type == "error") {
-					$("#btcPaymentInfo").hide(1);
-					$("#txFound").hide(1);
-					$("#errorMessageArea").append($("<span>", {
-						class:"text-center error",
-						id:"errorFromServer",
-						text:data.ErrorMessage
-					}));
-					$("#errorPayment").show(1);
-					socket.close();
 				}
-			}
-			socket.onclose = function(event) {
-				// if websocket closes unexpectedly, check for foundError.
-				if (foundError) {
-					$("#btcPaymentInfo").hide(1);
-					$("#txFound").hide(1);
-					$("#errorMessageArea").append($("<span>", {
-						class:"text-center error",
-						id:"errorFromServer",
-						text:"Our serve has unexpectedly disconnected.  Please reload this page."
-					}));
-					$("#errorPayment").show(1);
-					clearInterval(clock);
+				socket.onclose = function(event) {
+					// if websocket closes unexpectedly, check for foundError.
+					if (foundError) {
+						$("#btcPaymentInfo").hide(1);
+						$("#txFound").hide(1);
+						$("#errorMessageArea").append($("<span>", {
+							class:"text-center error",
+							id:"errorFromServer",
+							text:"Our server has unexpectedly disconnected.  Please reload this page."
+						}));
+						$("#errorPayment").show(1);
+						clearInterval(clock);
+					}
 				}
-			}
+			} catch(exception){
+   		 		console.log('Error '+exception);
+    			}
 		} else {
 			// if browser does not handle websockets, use long poll post (default set to 30s)
 			var check = setInterval(function(){

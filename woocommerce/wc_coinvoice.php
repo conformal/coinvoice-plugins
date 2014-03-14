@@ -600,7 +600,16 @@ function woocommerce_coinvoice_init() {
 			if (!$this->post_invoice($order_id, $coinvoiceReply)) {
 				return;
 			}
-
+			if ($this->get_option('development') === 'yes') {
+				$url = $this->get_option('coinvoice_url');
+			} else {
+				$coinvoice = new Coinvoice(); // make this static!
+				if ($this->get_option('sandbox') === 'yes') {
+					$url = $coinvoice->GetSandboxHostName();
+				} else {
+					$url = $coinvoice->GetHostName();
+				}
+			}
 			$link = 'bitcoin:'.$coinvoiceReply->BtcAddress.
 				'?amount='.$coinvoiceReply->TotalBtc.
 				'&label=Coinvoice';
@@ -609,6 +618,7 @@ function woocommerce_coinvoice_init() {
 				Thank you for your order, please pay as indicated
 			</p>
 			<div id="btcPaymentInfo">
+				<span id="wsUrl" style="display:none;"><?php echo $url; ?></span>
 				<span id="paymentCode" style="display:none;"><?php echo $coinvoiceReply->PaymentLinkId; ?></span>
 				<span id="endTime" style="display:none;"><?php echo date('c',$coinvoiceReply->ExpirationTime); ?></span>
 				<div class="green">
@@ -618,7 +628,7 @@ function woocommerce_coinvoice_init() {
 							<span class="timer text-center" id="timeLeft"></span>
 						</div>
 						<div id="payButton">
-							<a href="<?php $link ?>" class="btclink">Pay with local wallet</a>
+							<a href="<?php echo $link; ?>" class="btclink">Pay with local wallet</a>
 						</div>
 						<table class="specialTable">
 							<thead>
@@ -700,7 +710,6 @@ function woocommerce_coinvoice_init() {
 			<div id="errorPayment" class="green" style="display:none;">
 				<h3 class="text-center lato">An error occured.</h3>
 				<span class="text-center error", id="errorFromServer">
-					Our serve has unexpectedly disconnected.  Please reload this page
 				</span>
 				<div id="errorMessageArea">
 				</div>
@@ -916,7 +925,6 @@ function woocommerce_coinvoice_init() {
 				CvError(__('Internal error(6): status = ', 'woothemes').$coinvoiceReply->Status);
 				return false;
 			}
-
 			$reply = $coinvoiceReply;
 			return true;
 		}
