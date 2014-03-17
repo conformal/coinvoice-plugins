@@ -171,11 +171,13 @@
    		 		console.log('Error '+exception);
     			}
 		} else {
+			var host = $("#wsUrl").text();
 			// if browser does not handle websockets, use long poll post (default set to 30s)
 			var check = setInterval(function(){
 				if ($("#endTime").text() != "") {
+					jQuery.support.cors = true;
 					$.ajax({type: 'POST',
-						url: '/paymentportal/check/ajax/',
+						url: host + '/paymentportal/check/ajax/',
 						data: {code: $("#paymentCode").text()},
 						success:function(data) {
 							data = data.trim();
@@ -250,7 +252,18 @@
 									}));
 								}
 							}
-						}
+						},
+						error: function() {
+							$("#btcPaymentInfo").hide(1);
+							$("#errorMessageArea").append($("<span>", {
+								class:"text-center error",
+								id:"errorFromServer",
+								text:"Unable to connect to server.  Please contact support@coinvoice.com"
+							}));
+							$("#errorPayment").show(1);
+							clearInterval(check);
+							clearInterval(clock);
+        					}
    					});
 				} else {
 					clearInterval(check);

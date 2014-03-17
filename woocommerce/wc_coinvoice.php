@@ -709,8 +709,6 @@ function woocommerce_coinvoice_init() {
 			</div>
 			<div id="errorPayment" class="green" style="display:none;">
 				<h3 class="text-center lato">An error occured.</h3>
-				<span class="text-center error", id="errorFromServer">
-				</span>
 				<div id="errorMessageArea">
 				</div>
 			</div>
