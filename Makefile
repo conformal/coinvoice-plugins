@@ -103,4 +103,15 @@ install-woocommerce:
 	@scp -r ${QUIET_SCP} coinvoice woocommerce/* ${WWW}:${TARGETDIR}/coinvoice-woocommerce-dev/
 	@ssh ${WWW} "chmod -R 777 ${TARGETDIR}/coinvoice-woocommerce-dev"
 
-.PHONY: all deps depsdone zip php phpdoc sha256 test prestuff woocommerce d6_ubercart clean install-woocommerce
+install-magento:
+ifndef WWW
+	@echo "WWW (hostname) and TARGETDIR (magento plugin directory) must be set"; exit 1
+endif
+ifndef TARGETDIR
+	@echo "WWW (hostname) and TARGETDIR (magento plugin directory) must be set"; exit 1
+endif
+	@echo Installing magento to ${WWW}:${TARGETDIR}
+	@scp -r ${QUIET_SCP} magento/* ${WWW}:${TARGETDIR}
+	@scp -r ${QUIET_SCP} coinvoice ${WWW}:${TARGETDIR}/app/code/local/Conformal/Coinvoice/
+
+.PHONY: all deps depsdone zip php phpdoc sha256 test prestuff woocommerce d6_ubercart clean install-woocommerce install-magento
