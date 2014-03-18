@@ -530,7 +530,7 @@ function uc_payment_method_coinvoice($op, &$arg1) {
 
 		$form['uc_coinvoice_sandbox'] = array(
 			'#type'=>'checkbox',
-			'#title'=>t('Enable Coinvoice in sanbox mode'),
+			'#title'=>t('Enable Coinvoice in sandbox mode'),
 			'#default_value'=>variable_get('uc_coinvoice_sandbox', false),
 		);
 
