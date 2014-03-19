@@ -4,6 +4,7 @@ DOCDIR = coinvoice_api_v1
 WOODOCDIR = woocommerce/docs
 D6DOCDIR = d6_ubercart/docs
 D6UC ?= "coinvoice-drupal6-${VERSION}"
+WOOCOMMERCE ?= "coinvoice-woocommerce-${VERSION}"
 
 all: deps zip php phpdoc sha256 depsdone test man woocommerce d6_ubercart
 
@@ -55,8 +56,9 @@ d6_ubercart: man
 
 woocommerce: man
 	@echo "building woocommerce plugin version ${VERSION} "
-	@cp -pR coinvoice woocommerce/
-	@cd woocommerce && zip ../coinvoice-woocommerce-${VERSION} -qr .
+	@mkdir -p tmp/${WOOCOMMERCE}
+	@cp -pR coinvoice woocommerce/* tmp/${WOOCOMMERCE}/
+	@cd tmp && zip ../coinvoice-woocommerce-${VERSION} -qr .
 	@sha256 coinvoice-woocommerce-${VERSION}.zip
 
 clean:
