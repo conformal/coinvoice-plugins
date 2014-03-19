@@ -527,10 +527,15 @@ function woocommerce_coinvoice_init() {
 		 * @return void
 		 */
 		public function process_payment($order_id) {
-			if ($this->get_option('mode') === 'redirect') {
-				return $this->process_payment_redirect($order_id);
+			$b = $_SERVER['HTTP_USER_AGENT'];
+			$this->debug(__METHOD__, 'Browser: '.$b);
+			if (strpos($b, 'Chrome') || strpos($b, 'Firefox') || strpos($b, 'Trident')) {
+				// whitelisted browsers where cross site websockets work
+				if ($this->get_option('mode') !== 'redirect') {
+					return $this->process_payment_direct($order_id);
+				}
 			}
-			return $this->process_payment_direct($order_id);
+			return $this->process_payment_redirect($order_id);
 		}
 
 		/**
