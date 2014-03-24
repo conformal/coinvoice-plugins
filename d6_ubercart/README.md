@@ -55,7 +55,7 @@ API" tab.  Click on the "Generate an API Key" button.  The API key is how
 Coinvoice knows who is using the plugin.  The best way to transfer the key to
 Ubercart is by copying it from the Coinvoice sandbox site and pasting it into
 the Ubercart "API key" box.  Make sure to click on the "Enable Coinvoice in
-sanbox mode" checkbox before clicking on the "Save configuration" button.  At
+sandbox mode" checkbox before clicking on the "Save configuration" button.  At
 this point the plugin is fully setup in sandbox mode.
 
 Go to the store front and create a test order and select Coinvoice as the
@@ -64,7 +64,7 @@ widget shows up embedded on the "Review order" screen or the user is redirected
 to the Coinvoice payment gateway.  The next step is to pay for the order using
 testnet bitcoins.  If everything is correct the widget will change and display
 "Payment Received".  At this point the widget is awaiting confirmations.  Once
-all 6 confirmations have been see the widget will change once more to confirm
+all 6 confirmations have been seen the widget will change once more to confirm
 the entire payment.  The order status will go from "Pending" (not paid yet) to
 "Processing" (payment arived on network) to "Payment received" (6 blockchain
 confirmations) during this process.
@@ -81,7 +81,7 @@ log in as the administrator and follow the menu "Administer"->"Store
 administration"->"Configuration"->"Payment settings"->"Payment
 methods"->"Coinvoice settings".  Now copy and paste the API key from the live
 [Coinvoice site](https://coinvoice.com) into the "API key" edit box and make
-sure that the "Enable Coinvoice in sanbox mode" checkbox is not checked.
+sure that the "Enable Coinvoice in sandbox mode" checkbox is not checked.
 Coinvoice recommends doing a transaction using bitcoin to make sure everything
 works correctly.
 
