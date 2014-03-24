@@ -28,7 +28,7 @@ Drupal 6 requires the administrator to extract the plugin archive file in the
 correct directory.  Typically this directory is at ```sites/all/modules``` from
 the Drupal 6 base directory.  For example:
 ```/var/www/htdocs/drupal6/sites/all/modules```; note that this is an example
-and that it typically varies per webserver.
+and that it typically varies per web server.
 
 To extract the tar archive do something along these lines:
 ```tar zxf coinvoice-drupal6-e5db7ae.tgz```.
@@ -66,7 +66,7 @@ testnet bitcoins.  If everything is correct the widget will change and display
 "Payment Received".  At this point the widget is awaiting confirmations.  Once
 all 6 confirmations have been seen the widget will change once more to confirm
 the entire payment.  The order status will go from "Pending" (not paid yet) to
-"Processing" (payment arived on network) to "Payment received" (6 blockchain
+"Processing" (payment arrived on network) to "Payment received" (6 block chain
 confirmations) during this process.
 
 NOTE: Conformal Systems can assist in obtaining testnet bitcoins in order to

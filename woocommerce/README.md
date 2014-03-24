@@ -29,7 +29,7 @@ plugin directory or by using the WordPress GUI(2).
    the correct directory.  Typically this directory is at
    ```wp-content/plugins/``` from the WordPress base directory.  For example:
    ```/var/www/wordpress/wp-content/plugins```; note that this is an example
-   and that it typically varies per webserver.  To extract the zip archive do
+   and that it typically varies per web server.  To extract the zip archive do
    something along these lines: ```unzip coinvoice-woocommerce-e5db7ae.zip```.
 
 -or-
@@ -65,7 +65,7 @@ testnet bitcoins.  If everything is correct the widget will change and display
 "Payment Received".  At this point the widget is awaiting confirmations.  Once
 all 6 confirmations have been seen the widget will change once more to confirm
 the entire payment.  The order status will go from "on-hold" (not paid yet) to
-"Pending" (payment arived on network) to "Processing" (6 blockchain
+"Pending" (payment arrived on network) to "Processing" (6 block chain
 confirmations) during this process.
 
 NOTE: Conformal Systems can assist in obtaining testnet bitcoins in order to
