@@ -9,7 +9,7 @@ platforms is as follows:
 Detailed installation instructions for each e-commerce platform can be found in
 the directory corresponding to that plugin.  In addition to the e-commerce
 plugins, this repository includes examples and
-[documentation](https://github.com/conformal/coinvoice-plugins/blob/master/d6_ubercart/README-developers.md)
+[documentation](https://github.com/conformal/coinvoice-plugins/blob/master/README-developers.md)
 that can be used to integrate Coinvoice into other e-commerce software or
 custom-built websites.
 
