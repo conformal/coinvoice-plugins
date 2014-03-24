@@ -1,5 +1,16 @@
-License
--------
+d6_ubercart
+------------
+d6_ubercart is the Drupal 6 Ubercart 2 plugin for the Coinvoice payment
+gateway.
+
+Official plugins can be downloaded from
+
+## Configuration
+
+## Usage
+
+## License
+
 Copyright (c) 2014 Conformal Systems LLC. <support@conformal.com>
 
 Permission to use, copy, modify, and distribute this software for any
@@ -13,12 +24,3 @@ ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-Installation
-------------
-
-Configuration
--------------
-
-Usage
------
