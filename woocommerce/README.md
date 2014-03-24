@@ -9,7 +9,6 @@ server](https://opensource.conformal.com/snapshots/coinvoice-plugins/woocommerce
 
 WooCommerce plugin requires:
 - PHP 5.3 or 5.4
-- PHP cURL
 
 ## Installation
 
