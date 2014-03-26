@@ -24,7 +24,7 @@ move on to the next step.
 The WooCommerce plugin can be installed by unzipping(1) the file in the WordPress
 plugin directory or by using the WordPress GUI(2).
 
-1. WordPress requires the administrator to extract the plugin archive file in
+- (1) WordPress requires the administrator to extract the plugin archive file in
    the correct directory.  Typically this directory is at
    ```wp-content/plugins/``` from the WordPress base directory.  For example:
    ```/var/www/wordpress/wp-content/plugins```; note that this is an example
@@ -33,7 +33,7 @@ plugin directory or by using the WordPress GUI(2).
 
 -or-
 
-2. Log in as the WordPress administrator and click on "Plugins"->"Add
+- (2) Log in as the WordPress administrator and click on "Plugins"->"Add
    New"->"Upload"->"Choose file" and select the prior downloaded file.  Click
    on "Install Now" followed by "Activate Plugin".
    
