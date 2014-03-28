@@ -1,5 +1,23 @@
-License
--------
+magento
+------------
+magento is the Magento 1.8.x plugin for the Coinvoice payment gateway.
+
+Official plugins and digests can be downloaded from [Conformal's
+server](https://opensource.conformal.com/snapshots/coinvoice-plugins/magento/).
+
+## Requirements
+
+## Installation
+
+Currently the magento plugin is considered BETA quality.
+Once the code goes gold this README will be updated to contain installation and configuration information.
+
+## Configuration
+
+## Usage
+
+## License
+
 Copyright (c) 2014 Conformal Systems LLC. <support@conformal.com>
 
 Permission to use, copy, modify, and distribute this software for any
@@ -14,11 +32,3 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-Installation
-------------
-
-Configuration
--------------
-
-Usage
------
