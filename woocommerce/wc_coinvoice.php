@@ -81,7 +81,7 @@ function CvWpizeHttpHeaders($headers, &$headersOut, &$error) {
  * @param string $url coinvoice API provided URL.  This contains the POST URL.
  * @param string $headers coinvoice API provided HTTP headers array.
  * @param string $json coinvoice API provided JSON messages.  This is the HTTP body.
- * @param string $reply passed by reference and containsi, if successful,  the HTTP body of the reply.
+ * @param string $reply passed by reference and contains, if successful,  the HTTP body of the reply.
  * @param string $error passed by reference, human readable error if not successful.
  * @return boolean true if successful or false if unsuccessful.
  */
@@ -865,8 +865,7 @@ function woocommerce_coinvoice_init() {
 			}
 
 			// settings part
-			$invoiceRequest->NotificationURL = str_replace('https:', 'http:',
-				add_query_arg('wc-api', 'wc_coinvoice', home_url('/')));
+			$invoiceRequest->NotificationURL = add_query_arg('wc-api', 'wc_coinvoice', home_url('/'));
 			$invoiceRequest->InternalInvoiceId = base64_encode(serialize(
 				array($wc_order->id, $wc_order->order_key)));
 
